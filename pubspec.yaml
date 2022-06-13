@@ -1,0 +1,20 @@
+name: bitmap_canvas
+description: Render bitmap pixels with canvas-style APIs.
+version: 0.0.1
+homepage: https://github.com/Flutter-Bounty-Hunters/bitmap_canvas
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  # No Flutter configuration
