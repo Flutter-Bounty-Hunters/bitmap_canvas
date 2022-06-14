@@ -12,8 +12,12 @@
 `bitmap_canvas` provides the core rendering for `flutter_processing`
 
 ## Why do we need a bitmap canvas in Flutter?
-Flutter is built on top of SKIA, a portable rendering system. Why would we want to add software
-bitmap rendering on top of that? There are a couple answers:
+Flutter is built on top of SKIA, a portable rendering system, which supports hardware acceleration with shaders. If we want to paint individual pixels, shouldn't we use shaders? Software rendering is so slow!
 
-1. Learning how to paint pixels is easier with a high-level language, rather than shader languages.
-2. At the time of writing, Flutter does not fully support custom shaders, making many bitmap operations impossible with SKIA.
+There are a few reasons that you might choose software rendering (i.e., painting pixels with Dart):
+
+1. Learning how to paint pixels is easier with Dart than it is with a shader language, like GLSL.
+2. Some pixel painting behaviors can't be implemented with shaders, in general.
+3. At the time of writing, Flutter does not fully support custom shaders, which means that presently, most pixel painting behaviors can't be implemented with shaders in Flutter.
+
+`bitmap_canvas` is a package that provides easy-to-use APIs for pixel painting with Dart, along with widgets to easily display those paintings.
