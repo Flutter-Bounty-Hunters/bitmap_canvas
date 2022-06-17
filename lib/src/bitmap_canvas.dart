@@ -93,6 +93,7 @@ class BitmapCanvas implements Canvas {
   // if this method should be split into multiple methods for different purposes.
   Future<void> startBitmapTransaction() async {
     print("startBitmapTransaction()");
+    print(" - canvas: $_canvas");
     if (_pixels == null) {
       // There aren't any unapplied canvas commands. Fill the buffer
       // with empty pixels.
@@ -126,14 +127,15 @@ class BitmapCanvas implements Canvas {
   // might not be the same thing as "starting a bitmap transaction". Figure out
   // if this method should be split into multiple methods for different purposes.
   Future<void> endBitmapTransaction() async {
-    print("endBitmapTransaction()");
+    print("4.1 - endBitmapTransaction()");
     if (_pixels == null) {
       // No pixels to paint.
-      print("No pixels to paint");
+      print(" - No pixels to paint");
       return;
     }
+    print(" - canvas: ${_canvas.getSaveCount()}");
 
-    print("Encoding pixels to codec");
+    print("4.2 - Encoding pixels to codec");
     final pixelsCodec = await ImageDescriptor.raw(
       await ImmutableBuffer.fromUint8List(_pixels!.buffer.asUint8List()),
       width: size.width.round(),
@@ -141,10 +143,10 @@ class BitmapCanvas implements Canvas {
       pixelFormat: PixelFormat.rgba8888,
     ).instantiateCodec();
 
-    print("Encoding image into single frame");
+    print("4.3 - Encoding image into single frame");
     final pixelsImage = (await pixelsCodec.getNextFrame()).image;
 
-    print("Drawing image to canvas");
+    print("4.4 - Drawing image to canvas");
     _canvas.drawImage(pixelsImage, Offset.zero, Paint());
     markHasUnappliedCanvasCommands();
   }

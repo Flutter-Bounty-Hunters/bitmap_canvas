@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:bitmap_canvas/bitmap_canvas.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart' hide Image;
 
@@ -17,6 +18,7 @@ class BitmapPaint extends StatefulWidget {
     Key? key,
     required this.painter,
     required this.size,
+    this.playbackMode = PlaybackMode.play,
   }) : super(key: key);
 
   /// Painting delegate, which paints the pixels that are displayed
@@ -31,8 +33,12 @@ class BitmapPaint extends StatefulWidget {
   /// necessary.
   final Size size;
 
+  /// The playback mode for the [BitmapPaint], e.g., paint a single frame,
+  /// paint continuously, or pause painting.
+  final PlaybackMode playbackMode;
+
   @override
-  _BitmapPaintState createState() => _BitmapPaintState();
+  State createState() => _BitmapPaintState();
 }
 
 class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStateMixin {
@@ -48,15 +54,34 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
 
     _bitmapCanvas = BitmapCanvas(size: widget.size);
 
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick);
+    if (widget.playbackMode != PlaybackMode.pause) {
+      _startTicking();
+    }
   }
 
   @override
   void didUpdateWidget(BitmapPaint oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.playbackMode != oldWidget.playbackMode) {
+      if (widget.playbackMode == PlaybackMode.play && !_ticker.isTicking) {
+        _startTicking();
+      } else if (widget.playbackMode != PlaybackMode.play && _ticker.isTicking) {
+        _ticker.stop();
+      }
+    }
+
     if (widget.size != oldWidget.size) {
       _bitmapCanvas = BitmapCanvas(size: widget.size);
+
+      // We always want to repaint at least one frame when the size
+      // changes, because the new size is incompatible with our last
+      // image size.
+      if (!_ticker.isTicking) {
+        _startTicking();
+      }
+      // TODO: write a test that makes sure a singleFrame playback mode repaints when size changes
     }
   }
 
@@ -66,13 +91,24 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     super.dispose();
   }
 
-  bool _hasPainted = false;
+  void _startTicking() {
+    _lastFrameTime = Duration.zero;
+    _ticker.start();
+  }
+
+  bool _isPainting = false;
   Future<void> _onTick(elapsedTime) async {
-    if (_hasPainted) {
-      _ticker.stop();
+    if (_isPainting) {
       return;
     }
-    _hasPainted = true;
+    _isPainting = true;
+
+    if (widget.playbackMode != PlaybackMode.play) {
+      // The playback mode is either "single frame" or "paused".
+      // Either way, we don't want to paint another frame after
+      // this one.
+      _ticker.stop();
+    }
 
     print("Widget: _onTick(): $elapsedTime. BitmapCanvas: ${_bitmapCanvas.hashCode}");
     if (_bitmapCanvas.isDrawing) {
@@ -101,6 +137,7 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
       setState(() {
         _lastFrameTime = elapsedTime;
         _currentImage = _bitmapCanvas.publishedImage;
+        _isPainting = false;
       });
     }
   }
@@ -154,4 +191,16 @@ class BitmapPaintingContext {
   final Size size;
   final Duration elapsedTime;
   final Duration timeSinceLastFrame;
+}
+
+/// The playback mode for a [BitmapPaint] widget.
+enum PlaybackMode {
+  /// Renders only a single frame.
+  singleFrame,
+
+  /// Continuously renders frames.
+  play,
+
+  /// Doesn't render any frames.
+  pause,
 }
