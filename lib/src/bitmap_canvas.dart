@@ -45,6 +45,8 @@ class BitmapCanvas implements Canvas {
   /// bitmap operations.
   Image? _intermediateImage;
 
+  // TODO: document this (we need it for Flutter Processing)
+  ByteData? get pixels => _pixels;
   ByteData? _pixels;
 
   /// Whether our [_canvas] has operations that have yet to be rasterized to
