@@ -1,3 +1,3 @@
-library bitmap_canvas_logging;
+library bitmap_canvas;
 
 export 'src/logging.dart';
