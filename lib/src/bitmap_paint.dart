@@ -145,6 +145,7 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
         timeSinceLastFrame: elapsedTime - _lastFrameTime,
       ),
     );
+    paintLifecycleLog.fine("Delegate is done painting a frame.");
 
     paintLifecycleLog.fine("Ending the recording and producing a new image");
     await _bitmapCanvas.finishRecording();

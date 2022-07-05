@@ -83,6 +83,11 @@ class BitmapCanvas implements Canvas {
 
     _recorder = PictureRecorder();
     _canvas = Canvas(_recorder);
+
+    // Re-paint the previous frame so that new operations are applied on top.
+    if (publishedImage != null) {
+      _canvas.drawImage(publishedImage!, Offset.zero, Paint());
+    }
   }
 
   /// Prepares the [BitmapCanvas] to execute a series of bitmap manipulations.
