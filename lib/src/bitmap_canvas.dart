@@ -105,7 +105,7 @@ class BitmapCanvas implements Canvas {
   // if this method should be split into multiple methods for different purposes.
   Future<void> startBitmapTransaction() async {
     canvasLifecycleLog.info("Starting a bitmap transaction");
-    if (_pixels == null) {
+    if (!_hasUnappliedCanvasCommands && _pixels == null) {
       // There aren't any unapplied canvas commands. Fill the buffer
       // with empty pixels.
       final byteCount = size.width.round() * size.height.round() * 8;
