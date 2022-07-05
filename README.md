@@ -17,21 +17,26 @@ Paint animated static noise, where every pixel has a random brightness.
 
 ```dart
 Widget build(context) {
+  // BitmapPaint is like CustomPaint, except that you can paint
+  // individual pixels, too.
   return BitmapPaint(
     size: const Size(100, 100),
     painter: BitmapPainter.fromCallback((bitmapContext) async {
       final canvas = paintingContext.canvas;
       final size = paintingContext.size;
       final random = Random();
+      
       await canvas.startBitmapTransaction();
+      
       for (int x = 0; x < size.width; x += 1) {
         for (int y = 0; y < size.height; y += 1) {
+          // This is where we paint an individual pixel.
           canvas.set(x: x, y: y, color: HSVColor.fromAHSV(1.0, 0, 0, random.nextDouble()).toColor());
         }
       }
+      
       await canvas.endBitmapTransaction();
     }),
-    playbackMode: PlaybackMode.singleFrame,
   );
 }
 ```
