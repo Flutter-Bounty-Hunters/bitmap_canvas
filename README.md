@@ -7,17 +7,42 @@
 > This project is a Flutter Bounty Hunters [proof-of-concept](https://policies.flutterbountyhunters.com/proof-of-concept). Need more capabilities? [Fund a milestone](https://policies.flutterbountyhunters.com/fund-milestone) today!
 
 --- 
+`bitmap_canvas` is a package that provides easy-to-use APIs for pixel painting with Dart, along with widgets to easily display those paintings.
 
 ## In the wild
-`bitmap_canvas` provides the core rendering for `flutter_processing`
+`bitmap_canvas` is the renderer for `flutter_processing`.
+
+## Examples
+Paint animated static noise, where every pixel has a random brightness.
+
+```dart
+Widget build(context) {
+  return BitmapPaint(
+    size: const Size(100, 100),
+    painter: BitmapPainter.fromCallback((bitmapContext) async {
+      final canvas = paintingContext.canvas;
+      final size = paintingContext.size;
+      final random = Random();
+      await canvas.startBitmapTransaction();
+      for (int x = 0; x < size.width; x += 1) {
+        for (int y = 0; y < size.height; y += 1) {
+          canvas.set(x: x, y: y, color: HSVColor.fromAHSV(1.0, 0, 0, random.nextDouble()).toColor());
+        }
+      }
+      await canvas.endBitmapTransaction();
+    }),
+    playbackMode: PlaybackMode.singleFrame,
+  );
+}
+```
 
 ## Why do we need a bitmap canvas in Flutter?
-Flutter is built on top of SKIA, a portable rendering system, which supports hardware acceleration with shaders. If we want to paint individual pixels, shouldn't we use shaders? Software rendering is so slow!
+Flutter is built on top of SKIA, a portable rendering system, which supports hardware acceleration with shaders. 
 
-There are a few reasons that you might choose software rendering (i.e., painting pixels with Dart):
+You might wonder, if we want to paint individual pixels, shouldn't we use shaders? Software rendering is so slow!
 
-1. Learning how to paint pixels is easier with Dart than it is with a shader language, like GLSL.
-2. Some pixel painting behaviors can't be implemented with shaders, in general.
-3. At the time of writing, Flutter does not fully support custom shaders, which means that presently, most pixel painting behaviors can't be implemented with shaders in Flutter.
+There are a few reasons that you might choose software rendering (i.e., painting pixels with Dart) over shaders:
 
-`bitmap_canvas` is a package that provides easy-to-use APIs for pixel painting with Dart, along with widgets to easily display those paintings.
+1. Learning how to paint pixels in Dart is easier than with a shader language, like GLSL.
+2. Shaders can't implement every style of pixel painting. For example, any pixel painting where one pixel depends on the value of another pixel is unsupported in shaders.
+3. Flutter doesn't fully support custom shaders, which means that most pixel painting behaviors can't be implemented with shaders in Flutter.

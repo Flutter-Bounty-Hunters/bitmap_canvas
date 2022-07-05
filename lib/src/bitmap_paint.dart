@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:bitmap_canvas/bitmap_canvas.dart';
+import 'package:bitmap_canvas/src/logging.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart' hide Image;
 
@@ -11,7 +12,7 @@ import 'bitmap_canvas.dart';
 /// The [BitmapPaint] widget is very similar to a traditional [CustomPaint]
 /// widget, except a [BitmapPaint] delegates painting to a [BitmapPainter].
 /// A [BitmapPainter] uses a [BitmapCanvas], which supports traditional
-/// [Canvas] operations, as well as bitmap operations, like setting and
+/// [Canvas] operations, as well as bitmap operations, e.g., setting and
 /// getting individual pixel colors.
 class BitmapPaint extends StatefulWidget {
   const BitmapPaint({
@@ -55,8 +56,12 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     _bitmapCanvas = BitmapCanvas(size: widget.size);
 
     _ticker = createTicker(_onTick);
-    if (widget.playbackMode != PlaybackMode.pause) {
+    if (widget.playbackMode == PlaybackMode.play) {
       _startTicking();
+    } else if (widget.playbackMode == PlaybackMode.singleFrame) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        _paintFrame(Duration.zero);
+      });
     }
   }
 
@@ -67,8 +72,14 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     if (widget.playbackMode != oldWidget.playbackMode) {
       if (widget.playbackMode == PlaybackMode.play && !_ticker.isTicking) {
         _startTicking();
-      } else if (widget.playbackMode != PlaybackMode.play && _ticker.isTicking) {
+      } else if (oldWidget.playbackMode == PlaybackMode.play) {
         _ticker.stop();
+      }
+
+      if (oldWidget.playbackMode == PlaybackMode.pause && widget.playbackMode == PlaybackMode.singleFrame) {
+        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+          _paintFrame(_lastFrameTime);
+        });
       }
     }
 
@@ -110,16 +121,27 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
       _ticker.stop();
     }
 
-    print("Widget: _onTick(): $elapsedTime. BitmapCanvas: ${_bitmapCanvas.hashCode}");
+    await _paintFrame(elapsedTime);
+
+    if (mounted) {
+      setState(() {
+        _lastFrameTime = elapsedTime;
+        _isPainting = false;
+      });
+    }
+  }
+
+  Future<void> _paintFrame(Duration elapsedTime) async {
+    paintLifecycleLog.fine("On BitmapPaint frame tick. Elapsed time: $elapsedTime");
     if (_bitmapCanvas.isDrawing) {
-      print("Widget: - drawing in progress. Ignoring.");
+      paintLifecycleLog.fine(" - Painting already in progress. Ignoring tick.");
       return;
     }
 
-    print("Widget: starting recording");
+    paintLifecycleLog.fine("Starting a new recording.");
     _bitmapCanvas.startRecording();
 
-    print("Widget: painting a frame");
+    paintLifecycleLog.fine("Telling delegate to paint a frame.");
     // Ask our delegate to paint a frame. This call may take a while.
     await widget.painter.paint(
       BitmapPaintingContext(
@@ -130,14 +152,12 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
       ),
     );
 
-    print("Widget: finishing recording");
+    paintLifecycleLog.fine("Ending the recording and producing a new image");
     await _bitmapCanvas.finishRecording();
 
     if (mounted) {
       setState(() {
-        _lastFrameTime = elapsedTime;
         _currentImage = _bitmapCanvas.publishedImage;
-        _isPainting = false;
       });
     }
   }
@@ -165,6 +185,25 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
   }
 }
 
+/// The playback mode for a [BitmapPaint] widget.
+enum PlaybackMode {
+  /// Renders only a single frame.
+  singleFrame,
+
+  /// Continuously renders frames.
+  play,
+
+  /// Doesn't render any frames.
+  pause,
+}
+
+/// Delegate that paints with a [BitmapCanvas].
+///
+/// Simple use-cases can call the [BitmapPainter.fromCallback] constructor and pass
+/// a function that paints frames.
+///
+/// Use-cases that require internal variable manipulation should implement [BitmapPainter]
+/// in their own class.
 class BitmapPainter {
   const BitmapPainter.fromCallback(this._paint);
 
@@ -179,6 +218,8 @@ class BitmapPainter {
   }
 }
 
+/// Information provided to a [BitmapPainter] so that the painter can paint a single
+/// frame.
 class BitmapPaintingContext {
   BitmapPaintingContext({
     required this.canvas,
@@ -187,20 +228,17 @@ class BitmapPaintingContext {
     required this.timeSinceLastFrame,
   });
 
+  /// The canvas to paint with.
   final BitmapCanvas canvas;
+
+  /// The size of the canvas.
   final Size size;
+
+  /// The total time that the owning [BitmapPaint] has been painting frames.
+  ///
+  /// This time is reset whenever a [BitmapPaint] pauses rendering.
   final Duration elapsedTime;
+
+  /// The delta-time since the last frame was painted.
   final Duration timeSinceLastFrame;
-}
-
-/// The playback mode for a [BitmapPaint] widget.
-enum PlaybackMode {
-  /// Renders only a single frame.
-  singleFrame,
-
-  /// Continuously renders frames.
-  play,
-
-  /// Doesn't render any frames.
-  pause,
 }

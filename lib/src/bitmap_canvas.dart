@@ -1,25 +1,32 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:bitmap_canvas/src/logging.dart';
+
 /// A painting canvas that includes standard [Canvas] vector operations,
 /// as well as bitmap operations.
 ///
 /// Clients must adhere to the lifecycle contract of this object.
 ///
-/// **Start a new frame:**
-/// [startRecording()], which prepares a new frame for painting.
+/// **Start a new image:**
+/// To begin painting a new image, call [startRecording()], which prepares a new
+/// image for painting.
 ///
 /// **Paint desired content:**
+/// Vector commands run on the GPU. Pixel painting commands run on the CPU.
+/// As a result, these commands must be issued in phases.
 ///
-///  * Call any [canvas] commands.
-///  * [doIntermediateRasterization()], which immediately rasterizes
-///    any queued [Canvas] commands to [intermediateImage].
-///  * [loadPixels()], which runs [doIntermediateRasterization()],
-///    and then makes the pixel data in [intermediateImage] available via
-///    the [pixels] property.
+/// When you want to start painting pixels, call [startBitmapTransaction].
 ///
-/// **Produce the final frame image:**
-/// [finishRecording()], which produces the final [publishedImage].
+/// When you want to shift from pixel painting to vector commands, call
+/// [endBitmapTransaction].
+///
+/// **Produce the final image:**
+/// To produce an image that you can access, call [finishRecording()]. The resulting image
+/// is available in [publishedImage].
+///
+/// You can display the [publishedImage] in a widget, save it to a file, or
+/// send it over the network.
 class BitmapCanvas implements Canvas {
   BitmapCanvas({
     required this.size,
@@ -38,6 +45,10 @@ class BitmapCanvas implements Canvas {
   /// canvas is rendered to a bitmap, and then the bitmap operation is applied.
   late Canvas _canvas;
 
+  /// Whether this canvas is in the process of painting a frame.
+  bool get isDrawing => _isDrawing;
+  bool _isDrawing = false;
+
   /// Bitmap cache that's used to paint pixels during a single painting frame.
   ///
   /// This cache is needed because we have to switch from [Canvas] vector
@@ -53,32 +64,26 @@ class BitmapCanvas implements Canvas {
   /// a our [_intermediateImage].
   bool _hasUnappliedCanvasCommands = false;
 
-  /// Informs this [BitmapPaintingContext] that there is some number
+  /// Informs this [BitmapCanvas] that there is some number
   /// of [Canvas] commands which have not yet been rasterized to
-  /// [intermediateImage].
-  void markHasUnappliedCanvasCommands() => _hasUnappliedCanvasCommands = true;
-
-  Image? _publishedImage;
+  /// [_intermediateImage].
+  void _markHasUnappliedCanvasCommands() => _hasUnappliedCanvasCommands = true;
 
   /// The latest image to be produced by this [BitmapPaintingContext].
   Image? get publishedImage => _publishedImage;
+  Image? _publishedImage;
 
-  /// Starts a new frame painting.
+  /// Starts a new image.
   void startRecording() {
-    print("startRecording, is drawing? $_isDrawing");
+    canvasLifecycleLog.info("Starting a new recording");
     assert(!isDrawing);
 
     _isDrawing = true;
-    print(" - _isDrawing is now: $_isDrawing");
     _intermediateImage = null;
 
     _recorder = PictureRecorder();
     _canvas = Canvas(_recorder);
   }
-
-  /// Whether this canvas is in the process of painting a frame.
-  bool get isDrawing => _isDrawing;
-  bool _isDrawing = false;
 
   /// Prepares the [BitmapCanvas] to execute a series of bitmap manipulations.
   ///
@@ -94,29 +99,16 @@ class BitmapCanvas implements Canvas {
   // might not be the same thing as "starting a bitmap transaction". Figure out
   // if this method should be split into multiple methods for different purposes.
   Future<void> startBitmapTransaction() async {
-    print("startBitmapTransaction()");
-    print(" - canvas: $_canvas");
+    canvasLifecycleLog.info("Starting a bitmap transaction");
     if (_pixels == null) {
       // There aren't any unapplied canvas commands. Fill the buffer
       // with empty pixels.
       final byteCount = size.width.round() * size.height.round() * 8;
-
-      // final blankPixels = (await (await ImageDescriptor.raw(
-      //   await ImmutableBuffer.fromUint8List(
-      //     Uint8List.fromList(List.generate(pixelCount, (index) => 0xFFFFFFFF)),
-      //   ),
-      //   width: size.width.round(),
-      //   height: size.height.round(),
-      //   pixelFormat: PixelFormat.rgba8888,
-      // ).instantiateCodec())
-      //         .getNextFrame())
-      //     .image;
-
       _pixels = ByteData(byteCount);
       return;
     }
 
-    await doIntermediateRasterization();
+    await _doIntermediateRasterization();
 
     final sourceImage = (_intermediateImage ?? publishedImage)!;
     _pixels = await sourceImage.toByteData();
@@ -124,20 +116,19 @@ class BitmapCanvas implements Canvas {
 
   /// Paints the latest [pixels] onto the [canvas].
   ///
-  /// This operation is the logical inverse of [loadPixels()].
+  /// This operation is the logical inverse of [startBitmapTransaction].
   // TODO: this method was renamed from udpatePixels(). Some uses of updatePixels()
   // might not be the same thing as "starting a bitmap transaction". Figure out
   // if this method should be split into multiple methods for different purposes.
   Future<void> endBitmapTransaction() async {
-    print("4.1 - endBitmapTransaction()");
+    canvasLifecycleLog.info("Ending a bitmap transaction");
     if (_pixels == null) {
       // No pixels to paint.
-      print(" - No pixels to paint");
+      canvasLifecycleLog.fine(" - No pixels to paint");
       return;
     }
-    print(" - canvas: ${_canvas.getSaveCount()}");
 
-    print("4.2 - Encoding pixels to codec");
+    canvasLifecycleLog.finer("Encoding pixels to codec");
     final pixelsCodec = await ImageDescriptor.raw(
       await ImmutableBuffer.fromUint8List(_pixels!.buffer.asUint8List()),
       width: size.width.round(),
@@ -145,21 +136,21 @@ class BitmapCanvas implements Canvas {
       pixelFormat: PixelFormat.rgba8888,
     ).instantiateCodec();
 
-    print("4.3 - Encoding image into single frame");
+    canvasLifecycleLog.finer("Encoding image into single frame");
     final pixelsImage = (await pixelsCodec.getNextFrame()).image;
 
-    print("4.4 - Drawing image to canvas");
+    canvasLifecycleLog.finer("Drawing image to canvas");
     _canvas.drawImage(pixelsImage, Offset.zero, Paint());
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   /// Immediately applies any outstanding [canvas] operations to
   /// produce a new [intermediateImage] bitmap.
-  Future<void> doIntermediateRasterization() async {
-    print("doIntermediateRasterization()");
+  Future<void> _doIntermediateRasterization() async {
+    canvasLifecycleLog.info("Doing an intermediate rasterization");
     if (!_hasUnappliedCanvasCommands && _pixels != null) {
       // There are no commands to rasterize
-      print(" - nothing to rasterize right now");
+      canvasLifecycleLog.fine(" - nothing to rasterize right now");
       return;
     }
 
@@ -169,12 +160,13 @@ class BitmapCanvas implements Canvas {
     _canvas = Canvas(_recorder)..drawImage(_intermediateImage!, Offset.zero, Paint());
 
     _hasUnappliedCanvasCommands = false;
-    print("Done with intermediate rasterization");
+    canvasLifecycleLog.fine("Done with intermediate rasterization");
   }
 
-  /// Rasterizes any outstanding [canvas] commands to produce a new [publishedImage].
+  /// Produces a new [publishedImage] based on all the commands that were
+  /// run since [startRecording].
   Future<void> finishRecording() async {
-    print("finishRecording");
+    canvasLifecycleLog.info("Finishing the recording");
     if (_recorder.isRecording) {
       _publishedImage = await _rasterize();
     } else {
@@ -188,8 +180,9 @@ class BitmapCanvas implements Canvas {
     return await picture.toImage(size.width.round(), size.height.round());
   }
 
+  /// Returns the color of the pixel at the given ([x],[y]).
   Future<Color> get(int x, int y) async {
-    await doIntermediateRasterization();
+    await _doIntermediateRasterization();
     final sourceImage = (_intermediateImage ?? publishedImage)!;
 
     final pixelDataOffset = _getBitmapPixelOffset(
@@ -203,13 +196,17 @@ class BitmapCanvas implements Canvas {
     return Color(argbColor);
   }
 
+  /// Returns the colors of all pixels in the given region, represented as
+  /// an [Image].
+  ///
+  /// The region is defined by a top-left ([x],[y]), a [width], and a [height].
   Future<Image> getRegion({
     required int x,
     required int y,
     required int width,
     required int height,
   }) async {
-    await doIntermediateRasterization();
+    await _doIntermediateRasterization();
     final sourceImage = (_intermediateImage ?? publishedImage)!;
 
     final sourceData = await sourceImage.toByteData();
@@ -245,6 +242,7 @@ class BitmapCanvas implements Canvas {
     return (await codec.getNextFrame()).image;
   }
 
+  /// Sets the pixel at the given ([x],[y]) to the given [color].
   void set({
     required int x,
     required int y,
@@ -265,6 +263,10 @@ class BitmapCanvas implements Canvas {
     _pixels!.setUint32(pixelIndex, rgbaColorInt);
   }
 
+  /// Sets all pixels in the given region to the colors specified by the given [image].
+  ///
+  /// The region is defined by the top-left ([x],[y]) and the width and height of
+  /// the given [image].
   Future<void> setRegion({
     required Image image,
     int x = 0,
@@ -274,19 +276,19 @@ class BitmapCanvas implements Canvas {
       throw Exception("You must call startBitmapTransaction() before selling setRegion().");
     }
 
-    // In theory, this method should copy each pixels in the given image
+    // In theory, this method should copy each pixel in the given image
     // into the pixels buffer. But, it's easier for us to utilize the Canvas
     // to accomplish the same thing. To use the Canvas, we must first ensure
     // that any intermediate values in the pixels buffer are applied back to
     // the intermediate image. For example, if the user called set() on any
-    // pixels but has not yet called updatePixels(), those pixels would be
+    // pixels but has not yet called endBitmapTransaction(), those pixels would be
     // lost during an intermediate rasterization. Therefore, the first thing
-    // we do is updatePixels().
+    // we do is endBitmapTransaction().
     await endBitmapTransaction();
 
     // Use the Canvas to draw the given image at the desired offset.
     _canvas.drawImage(image, Offset.zero, Paint());
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
 
     // Rasterize the Canvas image command and load the latest image data
     // into the pixels buffer.
@@ -305,147 +307,147 @@ class BitmapCanvas implements Canvas {
   @override
   void clipPath(Path path, {bool doAntiAlias = true}) {
     _canvas.clipPath(path, doAntiAlias: doAntiAlias);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void clipRRect(RRect rrect, {bool doAntiAlias = true}) {
     _canvas.clipRRect(rrect, doAntiAlias: doAntiAlias);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void clipRect(Rect rect, {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
     _canvas.clipRect(rect, clipOp: clipOp, doAntiAlias: doAntiAlias);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter, Paint paint) {
     _canvas.drawArc(rect, startAngle, sweepAngle, useCenter, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawAtlas(Image atlas, List<RSTransform> transforms, List<Rect> rects, List<Color>? colors, BlendMode? blendMode,
       Rect? cullRect, Paint paint) {
     _canvas.drawAtlas(atlas, transforms, rects, colors, blendMode, cullRect, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawCircle(Offset center, double radius, Paint paint) {
     _canvas.drawCircle(center, radius, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawColor(Color color, BlendMode blendMode) {
     _canvas.drawColor(color, blendMode);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawDRRect(RRect outer, RRect inner, Paint paint) {
     _canvas.drawDRRect(outer, inner, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawImage(Image image, Offset offset, Paint paint) {
     _canvas.drawImage(image, offset, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawImageNine(Image image, Rect center, Rect dst, Paint paint) {
     _canvas.drawImageNine(image, center, dst, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawImageRect(Image image, Rect src, Rect dst, Paint paint) {
     _canvas.drawImageRect(image, src, dst, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawLine(Offset p1, Offset p2, Paint paint) {
     _canvas.drawLine(p1, p2, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawOval(Rect rect, Paint paint) {
     _canvas.drawOval(rect, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawPaint(Paint paint) {
     _canvas.drawPaint(paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawParagraph(Paragraph paragraph, Offset offset) {
     _canvas.drawParagraph(paragraph, offset);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawPath(Path path, Paint paint) {
     _canvas.drawPath(path, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawPicture(Picture picture) {
     _canvas.drawPicture(picture);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawPoints(PointMode pointMode, List<Offset> points, Paint paint) {
     _canvas.drawPoints(pointMode, points, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawRRect(RRect rrect, Paint paint) {
     _canvas.drawRRect(rrect, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawRawAtlas(Image atlas, Float32List rstTransforms, Float32List rects, Int32List? colors, BlendMode? blendMode,
       Rect? cullRect, Paint paint) {
     _canvas.drawRawAtlas(atlas, rstTransforms, rects, colors, blendMode, cullRect, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawRawPoints(PointMode pointMode, Float32List points, Paint paint) {
     _canvas.drawRawPoints(pointMode, points, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawRect(Rect rect, Paint paint) {
     _canvas.drawRect(rect, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawShadow(Path path, Color color, double elevation, bool transparentOccluder) {
     _canvas.drawShadow(path, color, elevation, transparentOccluder);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void drawVertices(Vertices vertices, BlendMode blendMode, Paint paint) {
     _canvas.drawVertices(vertices, blendMode, paint);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
@@ -461,7 +463,7 @@ class BitmapCanvas implements Canvas {
   @override
   void rotate(double radians) {
     _canvas.rotate(radians);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
@@ -477,25 +479,25 @@ class BitmapCanvas implements Canvas {
   @override
   void scale(double sx, [double? sy]) {
     _canvas.scale(sx, sy);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void skew(double sx, double sy) {
     _canvas.skew(sx, sy);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void transform(Float64List matrix4) {
     _canvas.transform(matrix4);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
 
   @override
   void translate(double dx, double dy) {
     _canvas.translate(dx, dy);
-    markHasUnappliedCanvasCommands();
+    _markHasUnappliedCanvasCommands();
   }
   //---- END Canvas delegations ---
 }

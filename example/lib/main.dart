@@ -41,6 +41,7 @@ class _BitmapCanvasDemoState extends State<BitmapCanvasDemo> implements BitmapPa
 
   @override
   Future<void> paint(BitmapPaintingContext paintingContext) async {
+    print("paint()");
     if (mounted) {
       setState(() {
         _frameTimes.add(paintingContext.timeSinceLastFrame);
@@ -54,7 +55,6 @@ class _BitmapCanvasDemoState extends State<BitmapCanvasDemo> implements BitmapPa
 
     final canvas = paintingContext.canvas;
     final size = paintingContext.size;
-
     final random = Random();
     await canvas.startBitmapTransaction();
     for (int x = 0; x < size.width; x += 1) {
@@ -76,6 +76,7 @@ class _BitmapCanvasDemoState extends State<BitmapCanvasDemo> implements BitmapPa
         BitmapPaint(
           size: const Size(100, 100),
           painter: this,
+          playbackMode: PlaybackMode.singleFrame,
         ),
         Positioned(
           right: 0,

@@ -23,24 +23,25 @@ void main() {
               body: Center(
                 child: BitmapPaint(
                   size: const Size(100, 100),
+                  playbackMode: PlaybackMode.singleFrame,
                   painter: BitmapPainter.fromCallback((paintingContext) async {
-                    print("TEST: Painting bitmap canvas");
+                    print("TEST 1: Painting bitmap canvas");
                     final canvas = paintingContext.canvas;
                     final size = paintingContext.size;
 
                     final random = Random(_randomSeed);
-                    print("TEST: Starting bitmap transaction");
+                    print("TEST 2: Starting bitmap transaction");
                     await canvas.startBitmapTransaction();
-                    print("TEST: Painting pixels");
+                    print("TEST 3: Painting pixels");
                     for (int x = 0; x < size.width; x += 1) {
                       for (int y = 0; y < size.height; y += 1) {
                         canvas.set(x: x, y: y, color: HSVColor.fromAHSV(1.0, 0, 0, random.nextDouble()).toColor());
                       }
                     }
-                    print("TEST: Ending bitmap transaction");
+                    print("TEST 4: Ending bitmap transaction");
                     await canvas.endBitmapTransaction();
 
-                    print("TEST: Done painting a frame");
+                    print("TEST 5: Done painting a frame");
                     if (!framePaintCompleter.isCompleted) {
                       framePaintCompleter.complete();
                     }
@@ -62,7 +63,8 @@ void main() {
         await tester.pumpAndSettle();
 
         print("Waiting for frame paint completer to complete");
-        await framePaintCompleter.future;
+        // await framePaintCompleter.future;
+        await Future.delayed(const Duration(seconds: 10));
 
         print("Painting golden");
         await screenMatchesGolden(tester, "random_noise", customPump: (tester) async {
