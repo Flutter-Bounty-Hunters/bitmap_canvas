@@ -19,7 +19,7 @@ class BitmapPaint extends StatefulWidget {
     Key? key,
     required this.painter,
     required this.size,
-    this.playbackMode = PlaybackMode.play,
+    this.playbackMode = PlaybackMode.continuous,
   }) : super(key: key);
 
   /// Painting delegate, which paints the pixels that are displayed
@@ -56,7 +56,7 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     _bitmapCanvas = BitmapCanvas(size: widget.size);
 
     _ticker = createTicker(_onTick);
-    if (widget.playbackMode == PlaybackMode.play) {
+    if (widget.playbackMode == PlaybackMode.continuous) {
       _startTicking();
     } else if (widget.playbackMode == PlaybackMode.singleFrame) {
       WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
@@ -70,16 +70,10 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     super.didUpdateWidget(oldWidget);
 
     if (widget.playbackMode != oldWidget.playbackMode) {
-      if (widget.playbackMode == PlaybackMode.play && !_ticker.isTicking) {
+      if (widget.playbackMode == PlaybackMode.continuous && !_ticker.isTicking) {
         _startTicking();
-      } else if (oldWidget.playbackMode == PlaybackMode.play) {
+      } else if (oldWidget.playbackMode == PlaybackMode.continuous) {
         _ticker.stop();
-      }
-
-      if (oldWidget.playbackMode == PlaybackMode.pause && widget.playbackMode == PlaybackMode.singleFrame) {
-        WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-          _paintFrame(_lastFrameTime);
-        });
       }
     }
 
@@ -114,7 +108,7 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     }
     _isPainting = true;
 
-    if (widget.playbackMode != PlaybackMode.play) {
+    if (widget.playbackMode != PlaybackMode.continuous) {
       // The playback mode is either "single frame" or "paused".
       // Either way, we don't want to paint another frame after
       // this one.
@@ -191,10 +185,7 @@ enum PlaybackMode {
   singleFrame,
 
   /// Continuously renders frames.
-  play,
-
-  /// Doesn't render any frames.
-  pause,
+  continuous,
 }
 
 /// Delegate that paints with a [BitmapCanvas].
