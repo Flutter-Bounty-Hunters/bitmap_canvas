@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:bitmap_canvas/src/logging.dart';
+import 'package:flutter/widgets.dart';
 
 /// A painting canvas that includes standard [Canvas] vector operations,
 /// as well as bitmap operations.
@@ -43,6 +44,8 @@ class BitmapCanvas implements Canvas {
   ///
   /// Whenever a bitmap operation is performed after a vector operation, this
   /// canvas is rendered to a bitmap, and then the bitmap operation is applied.
+  @visibleForTesting
+  Canvas get canvas => _canvas;
   late Canvas _canvas;
 
   /// Whether this canvas is in the process of painting a frame.
