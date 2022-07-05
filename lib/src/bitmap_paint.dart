@@ -126,13 +126,14 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
   }
 
   Future<void> _paintFrame(Duration elapsedTime) async {
-    paintLifecycleLog.fine("On BitmapPaint frame tick. Elapsed time: $elapsedTime");
+    paintLifecycleLog.finer("On BitmapPaint frame tick. Elapsed time: $elapsedTime");
     if (_bitmapCanvas.isDrawing) {
       paintLifecycleLog.fine(" - Painting already in progress. Ignoring tick.");
       return;
     }
 
     paintLifecycleLog.fine("Starting a new recording.");
+    paintLifecycleLog.fine(" - playback mode: ${widget.playbackMode}");
     _bitmapCanvas.startRecording();
 
     paintLifecycleLog.fine("Telling delegate to paint a frame.");
