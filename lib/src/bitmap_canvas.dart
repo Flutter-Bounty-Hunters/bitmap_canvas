@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:bitmap_canvas/src/logging.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 
 /// A painting canvas that includes standard [Canvas] vector operations,
 /// as well as bitmap operations.
