@@ -126,21 +126,25 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
   }
 
   Future<void> _paintFrame(Duration elapsedTime) async {
+    // Save a reference to the _bitmapCanvas in this method, in case the
+    // _bitmapCanvas is replaced while we're painting this frame.
+    final bitmapCanvas = _bitmapCanvas;
+
     paintLifecycleLog.finer("On BitmapPaint frame tick. Elapsed time: $elapsedTime");
-    if (_bitmapCanvas.isDrawing) {
+    if (bitmapCanvas.isDrawing) {
       paintLifecycleLog.fine(" - Painting already in progress. Ignoring tick.");
       return;
     }
 
     paintLifecycleLog.fine("Starting a new recording.");
     paintLifecycleLog.fine(" - playback mode: ${widget.playbackMode}");
-    _bitmapCanvas.startRecording();
+    bitmapCanvas.startRecording();
 
     paintLifecycleLog.fine("Telling delegate to paint a frame.");
     // Ask our delegate to paint a frame. This call may take a while.
     await widget.painter.paint(
       BitmapPaintingContext(
-        canvas: _bitmapCanvas,
+        canvas: bitmapCanvas,
         size: widget.size,
         elapsedTime: elapsedTime,
         timeSinceLastFrame: elapsedTime - _lastFrameTime,
@@ -149,11 +153,11 @@ class _BitmapPaintState extends State<BitmapPaint> with SingleTickerProviderStat
     paintLifecycleLog.fine("Delegate is done painting a frame.");
 
     paintLifecycleLog.fine("Ending the recording and producing a new image");
-    await _bitmapCanvas.finishRecording();
+    await bitmapCanvas.finishRecording();
 
     if (mounted) {
       setState(() {
-        _currentImage = _bitmapCanvas.publishedImage;
+        _currentImage = bitmapCanvas.publishedImage;
       });
     }
   }
