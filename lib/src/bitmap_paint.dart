@@ -207,7 +207,7 @@ class BitmapPainter {
       return;
     }
 
-    _paint!(paintingContext);
+    await _paint!(paintingContext);
   }
 }
 
