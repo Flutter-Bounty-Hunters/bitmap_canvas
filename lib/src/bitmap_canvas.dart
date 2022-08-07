@@ -59,7 +59,10 @@ class BitmapCanvas implements Canvas {
   /// bitmap operations.
   Image? _intermediateImage;
 
-  // TODO: document this (we need it for Flutter Processing)
+  /// Pixel buffer that holds all pixel values during a bitmap transaction.
+  ///
+  /// Consider using [get] or [getRegion] to query pixel values, and [set] or [setRegion] to
+  /// set pixel values. Direct access to the [pixels] buffer may be useful in some situations.
   ByteData? get pixels => _pixels;
   ByteData? _pixels;
 
@@ -103,9 +106,6 @@ class BitmapCanvas implements Canvas {
   /// Any traditional [Canvas] operations that you run during a bitmap transaction
   /// will be lost. When you're done with your bitmap operations, call
   /// [endBitmapTransaction] to shift back to the traditional [Canvas] mode.
-  // TODO: this method was renamed from loadPixels(). Some uses of loadPixels()
-  // might not be the same thing as "starting a bitmap transaction". Figure out
-  // if this method should be split into multiple methods for different purposes.
   Future<void> startBitmapTransaction() async {
     canvasLifecycleLog.info("Starting a bitmap transaction");
     if (!_hasUnappliedCanvasCommands && _pixels == null) {
