@@ -9,6 +9,11 @@
 --- 
 `bitmap_canvas` is a package that provides easy-to-use APIs for pixel painting with Dart, along with widgets to easily display those paintings.
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/7259036/183281593-b3f4c4e8-3bd4-407a-8844-79c5d2f1482e.gif">
+</p>
+
+
 ## In the wild
 `bitmap_canvas` is the renderer for `flutter_processing`.
 
