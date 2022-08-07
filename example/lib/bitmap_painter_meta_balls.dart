@@ -1,27 +1,10 @@
 import 'dart:math';
 
 import 'package:bitmap_canvas/bitmap_canvas.dart';
-import 'package:fast_noise/fast_noise.dart';
 import 'package:flutter/material.dart';
 
-class MetaBallsDemo extends StatefulWidget {
-  const MetaBallsDemo({Key? key}) : super(key: key);
-
-  @override
-  State<MetaBallsDemo> createState() => _FlowFieldBitmapPainterState();
-}
-
-class _FlowFieldBitmapPainterState extends State<MetaBallsDemo> implements BitmapPainter {
-  final _blobCount = 3;
-  final _blobRadius = 10.0;
-  final _blobSpeed = 1.0;
-
-  final _blobs = <Blob>[];
-
-  @override
-  void initState() {
-    super.initState();
-
+class MetaBallsPainter implements BitmapPainter {
+  MetaBallsPainter() {
     const width = 100;
     const height = 100;
     final random = Random();
@@ -35,6 +18,12 @@ class _FlowFieldBitmapPainterState extends State<MetaBallsDemo> implements Bitma
       );
     }
   }
+
+  final _blobCount = 3;
+  final _blobRadius = 10.0;
+  final _blobSpeed = 1.0;
+
+  final _blobs = <Blob>[];
 
   @override
   Future<void> paint(BitmapPaintingContext paintingContext) async {
@@ -77,15 +66,6 @@ class _FlowFieldBitmapPainterState extends State<MetaBallsDemo> implements Bitma
       blob.move(screenSize);
       // blob.paint(this);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BitmapPaint(
-      size: const Size(100, 100),
-      painter: this,
-      playbackMode: PlaybackMode.continuous,
-    );
   }
 }
 

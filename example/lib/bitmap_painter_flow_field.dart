@@ -4,14 +4,7 @@ import 'package:bitmap_canvas/bitmap_canvas.dart';
 import 'package:fast_noise/fast_noise.dart';
 import 'package:flutter/material.dart';
 
-class FlowFieldDemo extends StatefulWidget {
-  const FlowFieldDemo({Key? key}) : super(key: key);
-
-  @override
-  State<FlowFieldDemo> createState() => _FlowFieldBitmapPainterState();
-}
-
-class _FlowFieldBitmapPainterState extends State<FlowFieldDemo> implements BitmapPainter {
+class FlowFieldPainter implements BitmapPainter {
   static const _pixelsPerFlowGrid = 10;
   static const _particleCount = 50;
 
@@ -140,15 +133,6 @@ class _FlowFieldBitmapPainterState extends State<FlowFieldDemo> implements Bitma
       seed: _perlinNoiseSeed,
       octaves: _perlinNoiseOctaves,
       gain: _perlinNoiseFalloff,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BitmapPaint(
-      size: const Size(100, 100),
-      painter: this,
-      playbackMode: PlaybackMode.continuous,
     );
   }
 }

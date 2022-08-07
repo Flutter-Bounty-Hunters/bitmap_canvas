@@ -1,7 +1,9 @@
 import 'package:example/bitmap_painter_flow_field.dart';
 import 'package:example/bitmap_painter_meta_balls.dart';
+import 'package:example/bitmap_painter_perlin_noise.dart';
 import 'package:flutter/material.dart';
 
+import 'bitmap_canvas_demo.dart';
 import 'bitmap_painter_white_noise.dart';
 
 // TODO: If I change the scale of the BitmapPaint and hot reload, the
@@ -18,12 +20,19 @@ void main() {
           child: Wrap(
             spacing: 48,
             runSpacing: 48,
-            children: const [
-              BitmapCanvasDemo(),
-              FlowFieldDemo(),
-              MetaBallsDemo(),
-              BitmapCanvasDemo(),
-              BitmapCanvasDemo(),
+            children: [
+              BitmapCanvasDemo(
+                bitmapPainter: NoiseBitmapPainter(),
+              ),
+              BitmapCanvasDemo(
+                bitmapPainter: FlowFieldPainter(),
+              ),
+              BitmapCanvasDemo(
+                bitmapPainter: MetaBallsPainter(),
+              ),
+              BitmapCanvasDemo(
+                bitmapPainter: PerlinNoisePainter(),
+              ),
             ],
           ),
         ),
