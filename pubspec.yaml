@@ -1,6 +1,7 @@
 name: bitmap_canvas
 description: Render bitmap pixels with canvas-style APIs.
-version: 0.0.1
+version: 0.0.1+1
+repository: https://github.com/Flutter-Bounty-Hunters/bitmap_canvas
 homepage: https://github.com/Flutter-Bounty-Hunters/bitmap_canvas
 
 environment:
