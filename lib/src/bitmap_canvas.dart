@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:bitmap_canvas/src/logging.dart';
@@ -506,6 +505,21 @@ class BitmapCanvas implements Canvas {
   void translate(double dx, double dy) {
     _canvas.translate(dx, dy);
     _markHasUnappliedCanvasCommands();
+  }
+
+  @override
+  Rect getDestinationClipBounds() {
+    return _canvas.getDestinationClipBounds();
+  }
+
+  @override
+  Rect getLocalClipBounds() {
+    return _canvas.getLocalClipBounds();
+  }
+
+  @override
+  Float64List getTransform() {
+    return _canvas.getTransform();
   }
   //---- END Canvas delegations ---
 }
