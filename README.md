@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Flutter-Bounty-Hunters/bitmap_canvas/assets/7259036/e80bd6ed-973a-4165-819e-73957f061e68" alt="Bitmap Canvas - Render bitmap pixels with canvas-style APIs">
+  <img src="https://github.com/Flutter-Bounty-Hunters/bitmap_canvas/assets/7259036/9c6542f7-131d-4a0c-a313-706ee167fe18" alt="Bitmap Canvas - Render bitmap pixels with canvas-style APIs">
 </p>
 
 <p align="center">
