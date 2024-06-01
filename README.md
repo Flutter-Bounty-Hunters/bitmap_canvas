@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7259036/173299511-3b031cd5-6232-4804-aa16-be635581dd73.png" width="300" alt="Bitmap Canvas"><br>
-  <span><b>Render bitmap pixels with canvas-style APIs.</b></span><br><br>
+  <img src="https://github.com/Flutter-Bounty-Hunters/bitmap_canvas/assets/7259036/e80bd6ed-973a-4165-819e-73957f061e68" alt="Bitmap Canvas - Render bitmap pixels with canvas-style APIs">
 </p>
 
-
-> This project is a Flutter Bounty Hunters [proof-of-concept](https://policies.flutterbountyhunters.com/proof-of-concept). Need more capabilities? [Fund a milestone](https://policies.flutterbountyhunters.com/fund-milestone) today!
+<p align="center">
+  <a href="https://flutterbountyhunters.com" target="_blank">
+    <img src="https://github.com/Flutter-Bounty-Hunters/flutter_test_robots/assets/7259036/1b19720d-3dad-4ade-ac76-74313b67a898" alt="Built by the Flutter Bounty Hunters">
+  </a>
+</p>
 
 --- 
 `bitmap_canvas` is a package that provides easy-to-use APIs for pixel painting with Dart, along with widgets to easily display those paintings.
